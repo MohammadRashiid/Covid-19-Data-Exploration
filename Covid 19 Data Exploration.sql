@@ -80,12 +80,20 @@ where d.location = v.location and d.date = v.date and v.new_vaccinations not lik
 group by d.continent, d.location, d.date, d.population, v.new_vaccinations
 order by 2,3
 
--- USING WINDOWS FUNCTION - Rolling count
+-- USING WINDOWS FUNCTION - Rolling count (SubQueries)
 select  d.continent, d.location, d.date, d.population, v.new_vaccinations
 		,rollingPeopleVaccinated = sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)
 		,round((sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)/d.population)*100,2) as [% of Population recieved at least one Covid Vaccine]
 from CovidDeaths d, CovidVaccinations v
 where d.location = v.location and d.date = v.date and d.continent is not null
+order by 2,3
+
+-- USING WINDOWS FUNCTION - Rolling count (JOINS)
+select  d.continent, d.location, d.date, d.population, v.new_vaccinations
+		,rollingPeopleVaccinated = sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)
+		,round((sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)/d.population)*100,2) as [% of Population recieved at least one Covid Vaccine]
+from CovidDeaths d join CovidVaccinations v on d.location = v.location and d.date = v.date
+where d.continent is not null
 order by 2,3
 
 --ERROR_NOTE: i got errors in above query : 
@@ -98,7 +106,7 @@ with popvsvac as
 (
 select  d.continent, d.location, d.date, d.population, v.new_vaccinations
 		,TotalPeopleVaccinated = sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)
-from CovidDeaths d, CovidVaccinations v		
+from CovidDeaths d, CovidVaccinations v		--can use joins
 where d.location = v.location and d.date = v.date and d.continent is not null
 
 )
@@ -122,7 +130,7 @@ insert into #totalpeoplevaccinated
 
 select  d.continent, d.location, d.date, d.population, v.new_vaccinations
 		,TotalPeopleVaccinated = sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)
-from CovidDeaths d, CovidVaccinations v
+from CovidDeaths d, CovidVaccinations v --can use joins
 where d.location = v.location and d.date = v.date and d.continent is not null
 
 select *, round((TotalPeopleVaccinated/population)*100,2) as [% of Population recieved at least one Covid Vaccine]
@@ -136,7 +144,7 @@ create view PercentagePopulationVaccinated as
 select  d.continent, d.location, d.date, d.population, v.new_vaccinations
 		,rollingPeopleVaccinated = sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)
 		,round((sum(cast(v.new_vaccinations as bigint)) over(partition by d.location order by d.location, d.date)/d.population)*100,2) as [% of Population recieved at least one Covid Vaccine]
-from CovidDeaths d, CovidVaccinations v
+from CovidDeaths d, CovidVaccinations v --can use joins
 where d.location = v.location and d.date = v.date and d.continent is not null
 
 --select * from PercentagePopulationVaccinated order by 2,3
